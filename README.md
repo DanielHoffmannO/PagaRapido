@@ -27,17 +27,17 @@ Sistema de pagamentos via Pix com processamento assíncrono e notificações em 
 ## 🏗️ Arquitetura
 
 ```
-┌──────────────┐       ┌─────────────────┐       ┌──────────────────────┐
-│   Vue 3 SPA  │──────▶│  Pedidos API    │──────▶│      RabbitMQ        │
-│  (Vite)      │◀──────│  (.NET 9)       │       │                      │
+┌──────────────┐        ┌─────────────────┐       ┌──────────────────────┐
+│   Vue 3 SPA  │──────▶ │  Pedidos API    │──────▶│      RabbitMQ        │
+│  (Vite)      │◀────── │  (.NET 9)       │       │                      │
 │              │SignalR │  + EF Core      │       └──────────┬───────────┘
-└──────────────┘       │  + SignalR Hub   │                  │
-                       └─────────────────┘                  │
+└──────────────┘        │  + SignalR Hub  │                  │
+                        └─────────────────┘                  │
                               ▲                              │
                               │ PagamentoConfirmado          │ PedidoCriado
                               │                              ▼
                        ┌──────┴──────────┐       ┌──────────────────────┐
-                       │   PostgreSQL     │◀──────│  Pagamentos Worker   │
+                       │   PostgreSQL    │◀──────│  Pagamentos Worker   │
                        │   (dados)       │       │  (simula Pix)        │
                        └─────────────────┘       └──────────┬───────────┘
                                                             │
