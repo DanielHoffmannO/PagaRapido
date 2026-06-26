@@ -19,32 +19,41 @@ builder.Services.AddMassTransit(x =>
 
     x.UsingRabbitMq((context, cfg) =>
     {
-        cfg.Host(builder.Configuration["RabbitMQ:Host"] ?? "localhost", "/", h =>
+        var host = builder.Configuration["RabbitMQ:Host"] ?? "localhost";
+        var user = builder.Configuration["RabbitMQ:Username"] ?? "guest";
+        var pass = builder.Configuration["RabbitMQ:Password"] ?? "guest";
+        var vhost = builder.Configuration["RabbitMQ:VHost"] ?? "/";
+        var useSsl = host != "localhost";
+
+        cfg.Host(host, vhost, h =>
         {
-            h.Username(builder.Configuration["RabbitMQ:Username"] ?? "guest");
-            h.Password(builder.Configuration["RabbitMQ:Password"] ?? "guest");
+            h.Username(user);
+            h.Password(pass);
+            if (useSsl) h.UseSsl(s => s.Protocol = System.Security.Authentication.SslProtocols.Tls12);
         });
         cfg.ConfigureEndpoints(context);
     });
 });
 
+var allowedOrigins = builder.Configuration["AllowedOrigins"] ?? "http://localhost:5173";
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
         policy.AllowAnyHeader().AllowAnyMethod().AllowCredentials()
-              .WithOrigins("http://localhost:5173"));
+              .WithOrigins(allowedOrigins.Split(',')));
 });
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+// Auto-create DB em qualquer ambiente (projeto pessoal sem migrations)
+using (var scope = app.Services.CreateScope())
 {
-    app.MapOpenApi();
-
-    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<PagaRapidoDbContext>();
     db.Database.EnsureCreated();
 }
+
+if (app.Environment.IsDevelopment())
+    app.MapOpenApi();
 
 app.UseCors();
 app.MapControllers();
