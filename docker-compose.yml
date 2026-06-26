@@ -1,0 +1,62 @@
+services:
+  rabbitmq:
+    image: rabbitmq:4-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: pagarapido
+      POSTGRES_USER: pagarapido
+      POSTGRES_PASSWORD: pagarapido123
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  pedidos-api:
+    build:
+      context: .
+      dockerfile: src/PagaRapido.Pedidos.Api/Dockerfile
+    ports:
+      - "5000:8080"
+    environment:
+      ConnectionStrings__DefaultConnection: "Host=postgres;Database=pagarapido;Username=pagarapido;Password=pagarapido123"
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Username: guest
+      RabbitMQ__Password: guest
+    depends_on:
+      - rabbitmq
+      - postgres
+
+  pagamentos-worker:
+    build:
+      context: .
+      dockerfile: src/PagaRapido.Pagamentos.Worker/Dockerfile
+    environment:
+      ConnectionStrings__DefaultConnection: "Host=postgres;Database=pagarapido;Username=pagarapido;Password=pagarapido123"
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Username: guest
+      RabbitMQ__Password: guest
+    depends_on:
+      - rabbitmq
+      - postgres
+
+  notificacoes-worker:
+    build:
+      context: .
+      dockerfile: src/PagaRapido.Notificacoes.Worker/Dockerfile
+    environment:
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Username: guest
+      RabbitMQ__Password: guest
+    depends_on:
+      - rabbitmq
+
+volumes:
+  pgdata:
